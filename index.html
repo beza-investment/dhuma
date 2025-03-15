@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Quizzes</title>
+    <!-- Use compat versions for namespaced API -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: linear-gradient(150deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+        }
+    
+        h1 {
+            text-align: center;
+            font-size: 2.8rem;
+            margin-bottom: 2.5rem;
+            color: #2b2d42;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+    
+        h1::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #4361ee 0%, #3a0ca3 100%);
+            margin: 0.5rem auto;
+            border-radius: 2px;
+        }
+
+        .ask-others-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 1.2rem;
+            z-index: 10;
+        }
+
+        .ask-others-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(67, 97, 238, 0.25);
+        }
+
+        .search-container {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        select, input {
+            flex: 1;
+            padding: 14px 24px;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            background: white;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #4361ee;
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+        }
+
+        .quiz-item {
+            background: white;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quiz-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: linear-gradient(180deg, #4361ee 0%, #3a0ca3 100%);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .quiz-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .quiz-item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .quiz-item div h3 {
+            margin: 0;
+            color: #2b2d42;
+            font-size: 1.4rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .quiz-item div p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+
+        button {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+            padding: 12px 28px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(67, 97, 238, 0.25);
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .no-quizzes {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            color: #6c757d;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .quiz-item {
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: #4361ee;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .loading::after {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border: 3px solid #4361ee;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCayGcfnpCAGNDph3YTyEA9_KDdD2C5Fg0",
+            authDomain: "my-tiktok-cbd6f.firebaseapp.com",
+            databaseURL: "https://my-tiktok-cbd6f-default-rtdb.firebaseio.com",
+            projectId: "my-tiktok-cbd6f",
+            storageBucket: "my-tiktok-cbd6f.firebasestorage.app",
+            messagingSenderId: "964441294320",
+            appId: "1:964441294320:web:4c8da74a0cee8ed2644935",
+            measurementId: "G-RYBWW6XB10"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function loadQuizzes() {
+            const quizListDiv = document.getElementById("quizList");
+            quizListDiv.innerHTML = '<div class="loading">Loading quizzes...</div>';
+
+            const gradeFilter = document.getElementById('gradeFilter').value;
+            const subjectFilter = document.getElementById('subjectFilter').value.toLowerCase();
+
+            let ref = db.ref('quizzes');
+            
+            ref.once('value').then(snapshot => {
+                quizListDiv.innerHTML = '';
+                const quizzes = [];
+
+                snapshot.forEach(quizSnapshot => {
+                    const quiz = quizSnapshot.val();
+                    if ((!gradeFilter || quiz.grade === gradeFilter) &&
+                        (!subjectFilter || quiz.subject.toLowerCase().includes(subjectFilter))) {
+                        quizzes.push({ id: quizSnapshot.key, ...quiz });
+                    }
+                });
+
+                if (quizzes.length === 0) {
+                    quizListDiv.innerHTML = '<div class="no-quizzes">No quizzes found matching your criteria</div>';
+                    return;
+                }
+
+                quizzes.forEach(quiz => {
+                    const quizElement = document.createElement("div");
+                    quizElement.className = "quiz-item";
+                    quizElement.innerHTML = `
+                        <div>
+                            <h3>Grade ${quiz.grade} - ${quiz.subject}</h3>
+                            <p>${quiz.question}</p>
+                        </div>
+                        <button onclick="takeQuiz('${quiz.id}')">Take Quiz</button>
+                    `;
+                    quizListDiv.appendChild(quizElement);
+                });
+            });
+        }
+
+        function takeQuiz(quizId) {
+            window.location.href = `takequiz.html?quizId=${quizId}`;
+        }
+
+        // Initialize search functionality
+        window.onload = () => {
+            loadQuizzes();
+            document.getElementById('gradeFilter').addEventListener('change', loadQuizzes);
+            document.getElementById('subjectFilter').addEventListener('input', loadQuizzes);
+        };
+    </script>
+</head>
+<body>
+    <!-- Ask Others button -->
+    <button class="ask-others-button" onclick="window.location.href='askothers.html'">Ask Others</button>
+
+    <h1>Available Quizzes</h1>
+    
+    <div class="search-container">
+        <select id="gradeFilter">
+            <option value="">All Grades</option>
+            <option value="9">Grade 9</option>
+            <option value="10">Grade 10</option>
+            <option value="11">Grade 11</option>
+            <option value="12">Grade 12</option>
+        </select>
+
+        <input type="text" id="subjectFilter" placeholder="Filter by subject...">
+    </div>
+
+    <div id="quizList"></div>
+</body>
+</html>

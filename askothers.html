@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Public Messages</title>
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(150deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 1.5rem;
+            color: #2b2d42;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        h1::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #4361ee 0%, #3a0ca3 100%);
+            margin: 0.5rem auto;
+            border-radius: 2px;
+        }
+
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding: 1rem;
+        }
+
+        .message-item {
+            background: white;
+            padding: 1.2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+            color: #2b2d42;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .message-item p {
+            margin: 0;
+        }
+
+        .message-item .sender {
+            font-weight: bold;
+        }
+
+        .send-message-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+            align-items: center;
+        }
+
+        .send-message-container input,
+        .send-message-container button {
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 1rem;
+            border: 2px solid #dee2e6;
+            background: white;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .send-message-container button {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .send-message-container button:hover {
+            background: linear-gradient(135deg, #3a0ca3 0%, #4361ee 100%);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: #4361ee;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .loading::after {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border: 3px solid #4361ee;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Mobile responsive styles */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message-item {
+                font-size: 0.9rem;
+            }
+
+            .send-message-container input,
+            .send-message-container button {
+                width: 80%;
+                padding: 10px;
+            }
+        }
+    </style>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCayGcfnpCAGNDph3YTyEA9_KDdD2C5Fg0",
+            authDomain: "my-tiktok-cbd6f.firebaseapp.com",
+            databaseURL: "https://my-tiktok-cbd6f-default-rtdb.firebaseio.com",
+            projectId: "my-tiktok-cbd6f",
+            storageBucket: "my-tiktok-cbd6f.firebasestorage.app",
+            messagingSenderId: "964441294320",
+            appId: "1:964441294320:web:4c8da74a0cee8ed2644935",
+            measurementId: "G-RYBWW6XB10"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Function to load messages from Firebase
+        function loadMessages() {
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.innerHTML = '<div class="loading">Loading messages...</div>';
+
+            db.ref('messages').on('value', snapshot => {
+                messageContainer.innerHTML = '';
+                const messages = snapshot.val();
+
+                if (!messages) {
+                    messageContainer.innerHTML = '<div class="loading">No messages yet</div>';
+                    return;
+                }
+
+                Object.keys(messages).forEach(key => {
+                    const message = messages[key];
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'message-item';
+                    messageElement.innerHTML = ` 
+                        <div>
+                            <p class="sender">${message.sender}</p>
+                            <p>${message.message}</p>
+                        </div>
+                    `;
+                    messageContainer.appendChild(messageElement);
+                });
+            });
+        }
+
+        // Function to send message to Firebase
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const senderInput = document.getElementById('senderInput');
+
+            if (messageInput.value.trim() === '') return;
+
+            const newMessageRef = db.ref('messages').push();
+            newMessageRef.set({
+                sender: senderInput.value.trim() || 'Anonymous',
+                message: messageInput.value.trim()
+            });
+
+            messageInput.value = '';
+        }
+
+        window.onload = () => {
+            loadMessages();
+            document.getElementById('sendMessageButton').addEventListener('click', sendMessage);
+        };
+    </script>
+</head>
+<body>
+
+    <h1>Public Messages</h1>
+
+    <div class="message-container" id="messageContainer"></div>
+
+    <div class="send-message-container">
+        <input type="text" id="senderInput" placeholder="Your name (optional)">
+        <input type="text" id="messageInput" placeholder="Write your message">
+        <button id="sendMessageButton">Send Message</button>
+    </div>
+
+</body>
+</html>

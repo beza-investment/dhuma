@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Quiz</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .quiz-container {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .question {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .option {
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .option:hover {
+            background-color: #f8f8f8;
+        }
+
+        .selected {
+            border-color: #2196F3;
+            background-color: #e3f2fd;
+        }
+
+        .correct {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+
+        .incorrect {
+            border-color: #f44336;
+            background-color: #ffebee;
+        }
+
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #1976D2;
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+        }
+
+        .score {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+    </style>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCayGcfnpCAGNDph3YTyEA9_KDdD2C5Fg0",
+            authDomain: "my-tiktok-cbd6f.firebaseapp.com",
+            databaseURL: "https://my-tiktok-cbd6f-default-rtdb.firebaseio.com",
+            projectId: "my-tiktok-cbd6f",
+            storageBucket: "my-tiktok-cbd6f.firebasestorage.app",
+            messagingSenderId: "964441294320",
+            appId: "1:964441294320:web:4c8da74a0cee8ed2644935",
+            measurementId: "G-RYBWW6XB10"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let selectedAnswer = null;
+        let quizData = null;
+
+        function initializeQuiz() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const quizId = urlParams.get('quizId');
+
+            if (!quizId) {
+                document.body.innerHTML = '<h1>Error: No quiz selected</h1>';
+                return;
+            }
+
+            db.ref(`quizzes/${quizId}`).once('value')
+                .then(snapshot => {
+                    quizData = snapshot.val();
+                    if (!quizData) throw new Error('Quiz not found');
+                    displayQuiz();
+                })
+                .catch(error => {
+                    document.body.innerHTML = `<h1>Error: ${error.message}</h1>`;
+                });
+        }
+
+        function displayQuiz() {
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = `
+                <div class="question">${quizData.question}</div>
+                ${Object.entries(quizData.options).map(([key, value]) => `
+                    <div class="option" onclick="selectAnswer('${key}')" id="option-${key}">
+                        ${key}: ${value}
+                    </div>
+                `).join('')}
+                <button onclick="submitAnswer()">Submit Answer</button>
+            `;
+        }
+
+        function selectAnswer(answer) {
+            if (selectedAnswer) {
+                document.getElementById(`option-${selectedAnswer}`).classList.remove('selected');
+            }
+            selectedAnswer = answer;
+            document.getElementById(`option-${answer}`).classList.add('selected');
+        }
+
+        function submitAnswer() {
+            if (!selectedAnswer) {
+                alert('Please select an answer before submitting!');
+                return;
+            }
+
+            const options = document.querySelectorAll('.option');
+            options.forEach(option => {
+                option.style.pointerEvents = 'none'; // Disable further clicks
+                const optionKey = option.id.split('-')[1];
+                
+                if (optionKey === quizData.correctAnswer) {
+                    option.classList.add('correct');
+                } else if (optionKey === selectedAnswer) {
+                    option.classList.add('incorrect');
+                }
+            });
+
+            const isCorrect = selectedAnswer === quizData.correctAnswer;
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'results';
+            resultDiv.innerHTML = `
+                <div class="score">${isCorrect ? 'Correct! 🎉' : 'Incorrect 😞'}</div>
+                <p>Correct answer: ${quizData.correctAnswer}) ${quizData.options[quizData.correctAnswer]}</p>
+                <button onclick="window.location.href='viewquizzes.html'">Back to Quizzes</button>
+                <button onclick="location.reload()">Retake Quiz</button>
+            `;
+
+            document.getElementById('quizContainer').appendChild(resultDiv);
+        }
+
+        window.onload = initializeQuiz;
+    </script>
+</head>
+<body>
+    <div class="quiz-container" id="quizContainer">
+        <div class="loading">Loading quiz...</div>
+    </div>
+</body>
+</html>
